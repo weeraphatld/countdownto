@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown by ID</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(120deg, #f6d365, #fda085);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin: 20px 0;
+            color: #fff;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        #events {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1200px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .event {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 300px;
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .event:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .countdown {
+            font-size: 1.2rem;
+            color: #555;
+        }
+
+        .open-link {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s, transform 0.2s;
+        }
+
+        .open-link.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .open-link.disabled {
+            pointer-events: none;
+            background-color: #aaa;
+        }
+
+        .open-link.enabled:hover {
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .event {
+                max-width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .countdown {
+                font-size: 1rem;
+            }
+
+            .open-link {
+                font-size: 0.9rem;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>อีเวนต์สำคัญ by น้องหนังสือ</h1>
+    <div id="events"></div>
+
+    <script>
+        const apiUrl = 'https://script.google.com/macros/s/AKfycbx1IGuQ6JyO28OIpMPogj14ozgnxZIlWiH5ZFUXqGocRNFUm3rVD8dELHTkX_6pJUOw/exec'; // Replace with your Google Apps Script URL
+
+        async function fetchEvents(id) {
+            try {
+                const response = await fetch(`${apiUrl}?id=${id}`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                Swal.fire('Error', 'Failed to fetch data. Please try again later.', 'error');
+            }
+        }
+
+        function calculateTimeLeft(eventDate, eventTime) {
+            const now = new Date();
+            const target = new Date(`${eventDate.split('/').reverse().join('-')}T${eventTime}`);
+            const diff = target - now;
+
+            if (diff <= 0) return null;
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((diff / (1000 * 60)) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+
+            return { days, hours, minutes, seconds };
+        }
+
+        async function displayEvents() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            const events = await fetchEvents(id);
+            const eventsContainer = document.getElementById('events');
+
+            events.forEach((event) => {
+                const { ชื่อเหตุการณ์, วันที่, เวลา, ลิ้งค์ } = event;
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event';
+
+                const title = document.createElement('h2');
+                title.textContent = ชื่อเหตุการณ์;
+
+                const countdown = document.createElement('p');
+                countdown.className = 'countdown';
+                countdown.textContent = 'Loading...';
+
+                const button = document.createElement('button');
+                button.className = 'open-link disabled';
+                button.textContent = ลิ้งค์ === 'error' ? 'ยังไม่สามารถเปิดลิ้งค์ได้' : 'เปิดลิ้งค์';
+                button.disabled = ลิ้งค์ === 'error';
+
+                if (ลิ้งค์ !== 'error') {
+                    button.addEventListener('click', () => {
+                        window.open(ลิ้งค์, '_blank');
+                    });
+                }
+
+                eventDiv.appendChild(title);
+                eventDiv.appendChild(countdown);
+                eventDiv.appendChild(button);
+                eventsContainer.appendChild(eventDiv);
+
+                setInterval(() => {
+                    const timeLeft = calculateTimeLeft(วันที่, เวลา);
+
+                    if (timeLeft) {
+                        let timeString = 'เหลือเวลาอีก : ';
+
+                        // Only append non-zero values
+                        if (timeLeft.days > 0) timeString += `${timeLeft.days} วัน `;
+                        if (timeLeft.hours > 0) timeString += `${timeLeft.hours} ชั่วโมง `;
+                        if (timeLeft.minutes > 0) timeString += `${timeLeft.minutes} นาที `;
+                        if (timeLeft.seconds > 0) timeString += `${timeLeft.seconds} วินาที`;
+
+                        countdown.textContent = timeString;
+                        button.classList.add('disabled');
+                        button.disabled = true;
+                    } else {
+                        countdown.textContent = 'ได้เวลาแล้ว!!';
+                        if (ลิ้งค์ !== 'error') {
+                            button.classList.remove('disabled');
+                            button.classList.add('enabled');
+                            button.disabled = false;
+                        }
+                    }
+                }, 1000);
+            });
+        }
+
+        displayEvents();
+    </script>
+</body>
+</html>
