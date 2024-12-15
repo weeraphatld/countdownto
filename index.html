@@ -118,10 +118,15 @@
         async function fetchEvents(id) {
             try {
                 const response = await fetch(`${apiUrl}?id=${id}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
                 const data = await response.json();
                 return data;
             } catch (error) {
                 Swal.fire('Error', 'Failed to fetch data. Please try again later.', 'error');
+                console.error(error);
+                return null;
             }
         }
 
@@ -144,10 +149,22 @@
             const urlParams = new URLSearchParams(window.location.search);
             const id = urlParams.get('id');
 
-            const events = await fetchEvents(id);
-            const eventsContainer = document.getElementById('events');
+            if (!id) {
+                Swal.fire('Error', 'No ID provided in the URL', 'error');
+                return;
+            }
 
-            events.forEach((event) => {
+            const events = await fetchEvents(id);
+
+            if (!events || events.status === 'error') {
+                Swal.fire('Error', events?.message || 'Invalid ID or no data available', 'error');
+                return;
+            }
+
+            const eventsContainer = document.getElementById('events');
+            eventsContainer.innerHTML = ''; // Clear existing events if any
+
+            events.data.forEach((event) => {
                 const { ชื่อเหตุการณ์, วันที่, เวลา, ลิ้งค์ } = event;
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'event';
@@ -181,7 +198,6 @@
                     if (timeLeft) {
                         let timeString = 'เหลือเวลาอีก : ';
 
-                        // Only append non-zero values
                         if (timeLeft.days > 0) timeString += `${timeLeft.days} วัน `;
                         if (timeLeft.hours > 0) timeString += `${timeLeft.hours} ชั่วโมง `;
                         if (timeLeft.minutes > 0) timeString += `${timeLeft.minutes} นาที `;
